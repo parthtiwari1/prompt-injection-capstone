@@ -136,7 +136,7 @@ python evaluation/evaluate_all.py
 | Defence | ASR | Improvement |
 |---|---|---|
 | No Defence (baseline) | 20.0% | — |
-| Prompt Hardening | 12.5% | ▼ 7.5pp |
+| Prompt Hardening | 16.7% | ▼ 3.3pp |
 | Output Filtering | 20.0% | ▼ 0.0pp |
 | Spotlighting | 10.0% | ▼ 10.0pp |
 | **Input Sanitisation** | **6.7%** | **▼ 13.3pp ✅ Best** |
