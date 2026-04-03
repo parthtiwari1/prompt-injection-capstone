@@ -36,7 +36,7 @@ def run_evaluation():
 
     # ── Load all defence results ──────────────────────────────────
     defence_files = {
-        "Prompt Hardening":    "results/defence_results.json",
+        "Prompt Hardening":    "results/prompt_hardening_results.json",
         "Input Sanitisation":  "results/input_sanitisation_results.json",
         "Output Filtering":    "results/output_filtering_results.json",
         "Spotlighting":        "results/spotlighting_results.json",
