@@ -37,12 +37,18 @@ prompt-injection-capstone/
 │   ├── indirect_injection.py      # Document/attachment-based injection
 │   ├── roleplay_injection.py      # DAN, persona hijack, fictional framing
 │   ├── goal_hijacking.py          # Appending malicious tasks to legitimate requests
-│   └── obfuscation.py             # Base64, ROT13, leetspeak, multilingual attacks
+│   ├── obfuscation.py             # Base64, ROT13, leetspeak, multilingual attacks
+│   ├── run_qwen.py                # Run all attacks on Qwen 2.5
+│   └── run_gemini.py              # Run all attacks on Gemini Flash
 ├── mitigations/
 │   ├── prompt_hardening.py        # Explicit counter-instruction in system prompt
 │   ├── input_sanitisation.py      # Pattern-based filtering before LLM call
 │   ├── output_filtering.py        # Response scanning after LLM generation
 │   └── spotlighting.py            # XML delimiter tagging (Hines et al., 2024)
+├── warden/
+│   ├── warden_agent.py            # Rule-based Warden (pattern matching)
+│   ├── warden_llm.py              # LLM-based Warden (second LLM as judge)
+│   └── warden_classifier.py      # Classifier-based Warden (TF-IDF keyword classifier)
 ├── evaluation/
 │   ├── evaluate.py                # Single attack vs defence comparison
 │   └── evaluate_all.py            # Master evaluation across all attacks and defences
@@ -59,7 +65,8 @@ prompt-injection-capstone/
 
 - Python 3.x
 - [Ollama](https://ollama.com) installed locally
-- Llama 3.2 model pulled
+- Llama 3.2 and Qwen 2.5 models pulled
+- Google Gemini API key (free at https://aistudio.google.com)
 
 ### Installation
 
@@ -78,36 +85,62 @@ venv\Scripts\activate
 source venv/bin/activate
 
 # Install dependencies
-pip install ollama
+pip install ollama google-generativeai
 ```
 
-### Pull the LLM model
+### Pull LLM models
 
 ```bash
 ollama pull llama3.2
+ollama pull qwen2.5
+```
+
+### Set Gemini API key
+
+```bash
+# Windows
+$env:GEMINI_API_KEY="your-key-here"
+
+# Mac/Linux
+export GEMINI_API_KEY="your-key-here"
 ```
 
 ---
 
 ## ▶️ Running Experiments
 
-### Run individual attacks
+### Run attacks
 
 ```bash
+# Llama 3.2
 python attacks/direct_injection.py
 python attacks/indirect_injection.py
 python attacks/roleplay_injection.py
 python attacks/goal_hijacking.py
 python attacks/obfuscation.py
+
+# Qwen 2.5
+python attacks/run_qwen.py
+
+# Gemini Flash
+python attacks/run_gemini.py
 ```
 
-### Run individual defences
+### Run defences
 
 ```bash
 python mitigations/prompt_hardening.py
 python mitigations/input_sanitisation.py
 python mitigations/output_filtering.py
 python mitigations/spotlighting.py
+```
+
+### Run Warden agent
+
+```bash
+python warden/warden_agent.py        # Rule-based
+python warden/warden_llm.py          # LLM-based
+python warden/warden_classifier.py   # Classifier-based
 ```
 
 ### Run master evaluation
@@ -118,38 +151,47 @@ python evaluation/evaluate_all.py
 
 ---
 
-## 📊 Results (Llama 3.2)
+## 📊 Results
 
 ### Attack Baseline (No Defence)
 
-| Attack Type | Total | Succeeded | ASR |
+| Attack Type | Llama 3.2 | Qwen 2.5 | Gemini Flash |
 |---|---|---|---|
-| Direct Injection | 8 | 0 | 0.0% |
-| Indirect Injection | 5 | 1 | 20.0% |
-| Role-play Injection | 6 | 2 | 33.3% |
-| Goal Hijacking | 5 | 1 | 20.0% |
-| Obfuscation | 6 | 2 | 33.3% |
-| **Total** | **30** | **6** | **20.0%** |
+| Direct Injection | 0% | 0% | 0% |
+| Indirect/Document | 20% | 33.3% | 0% |
+| Role-play | 33.3% | 0% | 0% |
+| Goal Hijacking | 20% | 33.3% | 0% |
+| Obfuscation | 33.3% | 33.3% | 0% |
+| **Overall** | **20%** | **23.3%** | **0%** |
 
-### Defence Comparison
+### Traditional Defence Comparison (Llama 3.2)
 
 | Defence | ASR | Improvement |
 |---|---|---|
 | No Defence (baseline) | 20.0% | — |
-| Prompt Hardening | 16.7% | ▼ 3.3pp |
 | Output Filtering | 20.0% | ▼ 0.0pp |
+| Prompt Hardening | 16.7% | ▼ 3.3pp |
 | Spotlighting | 10.0% | ▼ 10.0pp |
 | **Input Sanitisation** | **6.7%** | **▼ 13.3pp ✅ Best** |
+
+### Warden Agent Results (Llama 3.2)
+
+| Warden Variant | Detection Rate | MTTD | Speed |
+|---|---|---|---|
+| Rule-based | 13.3% | 1.0 steps | Fast |
+| LLM-based | 20.0% | 1.5 steps | Slow |
+| **Classifier-based** | **56.7%** | **1.2 steps** | **Fast ✅ Best** |
 
 ---
 
 ## 🔑 Key Findings
 
-1. Llama 3.2 has strong built-in resistance to basic direct injection attacks (0% ASR)
-2. Role-play and obfuscation attacks are the most effective (33.3% ASR each)
-3. Input sanitisation is the best single defence — blocks 46.7% of attacks before reaching the model
-4. Output filtering alone provides no improvement over baseline
-5. Subtle attacks bypass ALL traditional defences — motivating the CoT Warden agent
+1. **Gemini Flash** blocked all 30 attacks with 0% ASR — strongest built-in safety
+2. **Llama 3.2** is most vulnerable to role-play and obfuscation attacks (33.3% ASR each)
+3. **Qwen 2.5** is most vulnerable to web content injection and fictional framing (100% ASR)
+4. **Input Sanitisation** is the best traditional defence (6.7% ASR on Llama 3.2)
+5. **Classifier-based Warden** achieved 56.7% detection rate with MTTD of 1.2 steps
+6. The Warden agent catches attacks at the **reasoning level** before harmful output is produced
 
 ---
 
@@ -159,6 +201,7 @@ python evaluation/evaluate_all.py
 - Liu, Yi et al. (2023). Prompt Injection Attack Against LLM-Integrated Applications. https://arxiv.org/abs/2306.05499
 - Greshake, K. et al. (2023). Not What You've Signed Up For. https://arxiv.org/abs/2302.12173
 - Hines, K. et al. (2024). Defending Against Indirect Prompt Injection with Spotlighting. https://arxiv.org/abs/2403.14720
+- Korbak, T. et al. (2025). Chain of Thought Monitorability. https://arxiv.org/abs/2507.11473
 - Robey, A. et al. (2023). SmoothLLM. https://arxiv.org/abs/2310.03684
 
 ---
@@ -174,8 +217,8 @@ python evaluation/evaluate_all.py
 
 ## 🔮 Next Steps
 
-- [ ] Run same attack suite on Qwen 2.5
-- [ ] Run same attack suite on Gemini Flash
-- [ ] Implement CoT Warden agent
-- [ ] Cross-model comparison
-- [ ] LLM-as-judge evaluation
+- [ ] LLM-as-judge evaluation for more accurate ASR measurement
+- [ ] Cross-model Warden evaluation on Qwen 2.5
+- [ ] False positive rate measurement
+- [ ] Final report assembly
+- [ ] Live demo preparation
